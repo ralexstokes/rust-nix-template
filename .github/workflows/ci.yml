@@ -44,17 +44,3 @@ jobs:
           git config user.name ci
           git add -A
           nix flake check --override-input rust-env "path:$export"
-
-      # Publishing the devshell here seeds the cache every scaffolded repo
-      # shares. Requires a CACHIX_AUTH_TOKEN repository secret.
-      - name: Publish development shell to Cachix
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
-        env:
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-        run: |
-          nix develop \
-            --profile "$RUNNER_TEMP/dev-shell" \
-            --command true
-          cachix push \
-            ralexstokes \
-            "$RUNNER_TEMP/dev-shell"
