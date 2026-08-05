@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Enable shared Nix cache
+        uses: cachix/cachix-action@v17
+        with:
+          name: ralexstokes
+          skipPush: true
+
+      - name: Run flake checks
+        run: nix flake check --no-update-lock-file
+
+      - name: Smoke-test the template
+        run: |
+          export=$RUNNER_TEMP/export
+          project=$RUNNER_TEMP/project
+          git checkout-index -a --prefix="$export/"
+          nix flake new -t "path:$export" "$project"
+          cd "$project"
+          git init -q
+          git config user.email ci@invalid
+          git config user.name ci
+          git add -A
+          nix flake check --override-input rust-env "path:$export"
+
+      # Publishing the devshell here seeds the cache every scaffolded repo
+      # shares. Requires a CACHIX_AUTH_TOKEN repository secret.
+      - name: Publish development shell to Cachix
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: |
+          nix develop \
+            --profile "$RUNNER_TEMP/dev-shell" \
+            --command true
+          cachix push \
+            ralexstokes \
+            "$RUNNER_TEMP/dev-shell"
