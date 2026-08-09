@@ -36,15 +36,23 @@
       project = lib.mkRustProject {
         src = ./templates/default;
         projectName = "rust-nix-template";
+        # Mirrors the scaffold flake.nix so the dogfood checks see the same
+        # sandbox contents users get — keep the two in sync.
+        extraSourceFilter =
+          path: type: builtins.match ".*/\\.config/nextest\\.toml" (toString path) != null;
         # The scaffold's automatic nixfmt check only sees files under its own
-        # tree; cover this repo's Nix sources as well.
-        extraChecks = pkgs: {
-          nixfmt-lib = pkgs.runCommandLocal "nixfmt-lib-check" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
-            nixfmt --check ${./flake.nix} ${./lib/default.nix} ${./lib/mk-rust-project.nix} \
-              ${./lib/crane-checks.nix}
-            touch $out
-          '';
-        };
+        # tree; cover this repo's Nix sources as well. The set pattern (rather
+        # than `pkgs: ...`) doubles as CI coverage for the check-context form
+        # of extraChecks.
+        extraChecks =
+          { pkgs, ... }:
+          {
+            nixfmt-lib = pkgs.runCommandLocal "nixfmt-lib-check" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
+              nixfmt --check ${./flake.nix} ${./lib/default.nix} ${./lib/mk-rust-project.nix} \
+                ${./lib/crane-checks.nix}
+              touch $out
+            '';
+          };
       };
     in
     project
@@ -56,10 +64,10 @@
         description = "Rust workspace with Nix devshell, crane CI checks, and worktree-safe tooling";
         welcomeText = ''
           Next steps:
-            chmod +x scripts/dev    # `nix flake new` drops the executable bit
+            chmod +x tools/dev      # `nix flake new` drops the executable bit
             git init && git add -A  # flakes only see tracked files
-            direnv allow            # interactive shells; agents use ./scripts/dev
-            ./scripts/dev just ci
+            direnv allow            # interactive shells; agents use ./tools/dev
+            ./tools/dev just ci
 
           See README.md for the rename checklist.
         '';

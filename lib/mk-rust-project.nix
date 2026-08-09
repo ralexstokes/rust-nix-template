@@ -14,12 +14,22 @@
   projectName ? null,
   # pkgs: [ ... ] — additional packages for the devshell.
   extraShellPackages ? pkgs: [ ],
-  # pkgs: { ... } — additional flake checks, merged over the defaults.
+  # Additional flake checks, merged over the defaults. Either a plain
+  # function `pkgs: { ... }`, or a set pattern such as
+  # `{ pkgs, craneLibNightly, commonArgs, cargoArtifactsNightly, ... }: { ... }`
+  # — each named attribute is supplied from pkgs merged with the check
+  # context (toolchains, crane instances, filtered source, prebuilt
+  # dependency artifacts; see crane-checks.nix), the context winning on
+  # collision. Custom cargo checks reuse the template's machinery instead of
+  # rebuilding it, and destructuring pkgs directly also works.
   extraChecks ? pkgs: { },
   # Shell commands appended to the cargo-ci check (e.g. example smoke runs).
   extraCiCommands ? "",
   # path: type: bool — files to keep in the cargo build sandbox beyond the
-  # defaults (Cargo sources and trybuild .stderr expectations).
+  # defaults (Cargo sources and trybuild .stderr expectations). Anything else
+  # a check reads — nextest config, Markdown pulled into doctests via
+  # include_str! — must be kept here, or `nix flake check` silently runs
+  # without it even though the working tree has it.
   extraSourceFilter ? path: type: false,
 }:
 let
@@ -68,6 +78,25 @@ flake-utils.lib.eachDefaultSystem (
         ;
       projectName = name;
     };
+    # A set-pattern extraChecks receives its named attrs from pkgs merged
+    # with the check context (context wins), so pre-existing consumers that
+    # destructure pkgs (`{ runCommandLocal, ... }: ...`) keep working next to
+    # ones pulling crane internals. A plain lambda (functionArgs = { }) keeps
+    # the original pkgs interface.
+    checkContext =
+      pkgs
+      // {
+        inherit pkgs rustToolchain nightlyToolchain;
+      }
+      // cargoChecks.context;
+    extraCheckAttrs =
+      let
+        wanted = builtins.functionArgs extraChecks;
+      in
+      if wanted == { } then
+        extraChecks pkgs
+      else
+        extraChecks (builtins.intersectAttrs wanted checkContext);
     # Every .nix file in the project, so consumers never maintain a list.
     nixSources = builtins.filter (p: pkgs.lib.hasSuffix ".nix" (toString p)) (
       pkgs.lib.filesystem.listFilesRecursive src
@@ -82,8 +111,8 @@ flake-utils.lib.eachDefaultSystem (
         touch $out
       '';
     }
-    // cargoChecks
-    // extraChecks pkgs;
+    // cargoChecks.checks
+    // extraCheckAttrs;
 
     devShells.default = pkgs.mkShell {
       RUSTUP_HOME = rustupHome;
