@@ -6,7 +6,7 @@ A Nix flake providing a complete Rust development environment two ways:
    checks, and formatter, defined once here and updated downstream with
    `nix flake update`.
 2. **A template** (`templates.default`) for the files Nix can't inject — the
-   `justfile`, `scripts/dev`, `.envrc`, GitHub workflow, toolchain files, and a
+   `justfile`, `tools/dev`, `.envrc`, GitHub workflow, toolchain files, and a
    placeholder crate.
 
 ## Starting a new project
@@ -14,9 +14,9 @@ A Nix flake providing a complete Rust development environment two ways:
 ```sh
 nix flake new -t github:ralexstokes/rust-nix-template my-project
 cd my-project
-chmod +x scripts/dev          # `nix flake new` drops the executable bit
+chmod +x tools/dev            # `nix flake new` drops the executable bit
 git init && git add -A        # flakes only see tracked files
-./scripts/dev just ci
+./tools/dev just ci
 ```
 
 The scaffold's `flake.nix` is ~10 lines: it pins this repo as the `rust-env`
@@ -45,6 +45,22 @@ Arguments:
 | `extraCiCommands`    | `""`                             | shell commands appended to `cargo-ci` (e.g. example smoke runs) |
 | `extraSourceFilter`  | `path: type: false`              | extra files kept in the cargo build sandbox |
 
+`extraChecks` can also be written as a set pattern, e.g.
+`{ pkgs, craneLibNightly, commonArgs, cargoArtifactsNightly, ... }: { ... }`.
+Each named attribute is supplied from the internal check context — `pkgs`,
+`rustToolchain`, `nightlyToolchain`, `craneLibStable`, `craneLibNightly`,
+`cargoSrc`, `commonArgs`, `cargoArtifactsStable`, `cargoArtifactsNightly` — so
+a custom cargo check can reuse the toolchains, the filtered source, and the
+prebuilt dependency artifacts instead of reconstructing them (and paying for a
+second dependency build) in the consuming flake.
+
+The check sandbox keeps only Cargo sources plus trybuild `.stderr`
+expectations by default. Anything else a check reads — nextest config,
+Markdown pulled into doctests via `include_str!` — must be kept with
+`extraSourceFilter`, or `nix flake check` will silently run without it even
+though the working tree (and `just ci`) sees it. The scaffold's `flake.nix`
+shows the pattern for its `.config/nextest.toml`.
+
 ## Repo layout
 
 - `lib/` — `mk-rust-project.nix` (devshell + outputs) and `crane-checks.nix`
@@ -56,21 +72,21 @@ Arguments:
 
 ## Developing this repo
 
-`./scripts/dev <cmd>` (a symlink into the scaffold) runs commands in this
+`./tools/dev <cmd>` (a symlink into the scaffold) runs commands in this
 repo's devshell. The authoritative gate is:
 
 ```sh
-./scripts/dev nix flake check --no-update-lock-file
+./tools/dev nix flake check --no-update-lock-file
 ```
 
 For fast cargo iteration against the scaffold workspace, run the scaffold's
 justfile from inside it with the root devshell:
 
 ```sh
-cd templates/default && ../../scripts/dev just test
+cd templates/default && ../../tools/dev just test
 ```
 
-(Do not run `templates/default/scripts/dev` itself from this repo — it would
+(Do not run `templates/default/tools/dev` itself from this repo — it would
 try to enter the scaffold's own flake, whose `rust-env` input points at the
 published repo.)
 

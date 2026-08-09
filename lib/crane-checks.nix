@@ -40,36 +40,53 @@ let
   cargoArtifactsNightly = craneLibNightly.buildDepsOnly dependencyArgs;
 in
 {
-  cargo-fmt = craneLibNightly.cargoFmt (
-    commonArgs
-    // {
-      cargoExtraArgs = "--all";
-    }
-  );
+  checks = {
+    cargo-fmt = craneLibNightly.cargoFmt (
+      commonArgs
+      // {
+        cargoExtraArgs = "--all";
+      }
+    );
 
-  cargo-clippy = craneLibNightly.cargoClippy (
-    commonArgs
-    // {
-      cargoArtifacts = cargoArtifactsNightly;
-      cargoExtraArgs = "--locked";
-      cargoClippyExtraArgs = "--workspace --all-targets --all-features -- -D warnings";
-      doInstallCargoArtifacts = false;
-    }
-  );
+    cargo-clippy = craneLibNightly.cargoClippy (
+      commonArgs
+      // {
+        cargoArtifacts = cargoArtifactsNightly;
+        cargoExtraArgs = "--locked";
+        cargoClippyExtraArgs = "--workspace --all-targets --all-features -- -D warnings";
+        doInstallCargoArtifacts = false;
+      }
+    );
 
-  cargo-ci = craneLibStable.mkCargoDerivation (
-    commonArgs
-    // {
-      cargoArtifacts = cargoArtifactsStable;
-      nativeBuildInputs = [ pkgs.cargo-nextest ];
-      buildPhaseCargoCommand = ''
-        cargo build --locked --workspace --all-targets --all-features
-        cargo nextest run --locked --workspace --all-features --lib --bins --tests --examples
-        cargo test --locked --workspace --doc --all-features
-        RUSTDOCFLAGS="-D warnings" cargo doc --locked --workspace --no-deps --all-features
-      ''
-      + extraCiCommands;
-      doInstallCargoArtifacts = false;
-    }
-  );
+    cargo-ci = craneLibStable.mkCargoDerivation (
+      commonArgs
+      // {
+        cargoArtifacts = cargoArtifactsStable;
+        nativeBuildInputs = [ pkgs.cargo-nextest ];
+        buildPhaseCargoCommand = ''
+          cargo build --locked --workspace --all-targets --all-features
+          cargo nextest run --locked --workspace --all-features --lib --bins --tests --examples
+          cargo test --locked --workspace --doc --all-features
+          RUSTDOCFLAGS="-D warnings" cargo doc --locked --workspace --no-deps --all-features
+        ''
+        + extraCiCommands;
+        doInstallCargoArtifacts = false;
+      }
+    );
+  };
+
+  # Build internals for consumer-defined checks (the set-pattern form of
+  # `extraChecks` in mk-rust-project.nix): toolchain-bound crane instances,
+  # the filtered source, shared derivation arguments, and prebuilt dependency
+  # artifacts — so custom cargo checks need not reconstruct any of them.
+  context = {
+    inherit
+      craneLibStable
+      craneLibNightly
+      cargoSrc
+      commonArgs
+      cargoArtifactsStable
+      cargoArtifactsNightly
+      ;
+  };
 }
