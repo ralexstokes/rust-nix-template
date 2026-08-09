@@ -19,9 +19,9 @@
   # `{ pkgs, craneLibNightly, commonArgs, cargoArtifactsNightly, ... }: { ... }`
   # — each named attribute is supplied from pkgs merged with the check
   # context (toolchains, crane instances, filtered source, prebuilt
-  # dependency artifacts; see crane-checks.nix, which wins on collision), so
-  # custom cargo checks reuse the template's machinery instead of rebuilding
-  # it, and destructuring pkgs directly also works.
+  # dependency artifacts; see crane-checks.nix), the context winning on
+  # collision. Custom cargo checks reuse the template's machinery instead of
+  # rebuilding it, and destructuring pkgs directly also works.
   extraChecks ? pkgs: { },
   # Shell commands appended to the cargo-ci check (e.g. example smoke runs).
   extraCiCommands ? "",
