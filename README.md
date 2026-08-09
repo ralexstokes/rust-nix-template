@@ -47,12 +47,14 @@ Arguments:
 
 `extraChecks` can also be written as a set pattern, e.g.
 `{ pkgs, craneLibNightly, commonArgs, cargoArtifactsNightly, ... }: { ... }`.
-Each named attribute is supplied from the internal check context — `pkgs`,
-`rustToolchain`, `nightlyToolchain`, `craneLibStable`, `craneLibNightly`,
-`cargoSrc`, `commonArgs`, `cargoArtifactsStable`, `cargoArtifactsNightly` — so
-a custom cargo check can reuse the toolchains, the filtered source, and the
-prebuilt dependency artifacts instead of reconstructing them (and paying for a
-second dependency build) in the consuming flake.
+Each named attribute is supplied from `pkgs` merged with the internal check
+context — `pkgs`, `rustToolchain`, `nightlyToolchain`, `craneLibStable`,
+`craneLibNightly`, `cargoSrc`, `commonArgs`, `cargoArtifactsStable`,
+`cargoArtifactsNightly`, the context winning on collision — so a custom cargo
+check can reuse the toolchains, the filtered source, and the prebuilt
+dependency artifacts instead of reconstructing them (and paying for a second
+dependency build) in the consuming flake. Destructuring packages directly
+(`{ runCommandLocal, ... }: { ... }`) works as well.
 
 The check sandbox keeps only Cargo sources plus trybuild `.stderr`
 expectations by default. Anything else a check reads — nextest config,

@@ -17,10 +17,11 @@
   # Additional flake checks, merged over the defaults. Either a plain
   # function `pkgs: { ... }`, or a set pattern such as
   # `{ pkgs, craneLibNightly, commonArgs, cargoArtifactsNightly, ... }: { ... }`
-  # — each named attribute is supplied from the check context (toolchains,
-  # crane instances, filtered source, prebuilt dependency artifacts; see
-  # crane-checks.nix), so custom cargo checks reuse the template's machinery
-  # instead of rebuilding it.
+  # — each named attribute is supplied from pkgs merged with the check
+  # context (toolchains, crane instances, filtered source, prebuilt
+  # dependency artifacts; see crane-checks.nix, which wins on collision), so
+  # custom cargo checks reuse the template's machinery instead of rebuilding
+  # it, and destructuring pkgs directly also works.
   extraChecks ? pkgs: { },
   # Shell commands appended to the cargo-ci check (e.g. example smoke runs).
   extraCiCommands ? "",
@@ -77,12 +78,17 @@ flake-utils.lib.eachDefaultSystem (
         ;
       projectName = name;
     };
-    # A set-pattern extraChecks receives the named attrs from this context; a
-    # plain lambda (functionArgs = { }) keeps the original pkgs interface.
-    checkContext = {
-      inherit pkgs rustToolchain nightlyToolchain;
-    }
-    // cargoChecks.context;
+    # A set-pattern extraChecks receives its named attrs from pkgs merged
+    # with the check context (context wins), so pre-existing consumers that
+    # destructure pkgs (`{ runCommandLocal, ... }: ...`) keep working next to
+    # ones pulling crane internals. A plain lambda (functionArgs = { }) keeps
+    # the original pkgs interface.
+    checkContext =
+      pkgs
+      // {
+        inherit pkgs rustToolchain nightlyToolchain;
+      }
+      // cargoChecks.context;
     extraCheckAttrs =
       let
         wanted = builtins.functionArgs extraChecks;
