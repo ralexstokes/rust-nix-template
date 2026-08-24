@@ -36,6 +36,10 @@
       project = lib.mkRustProject {
         src = ./templates/default;
         projectName = "rust-nix-template";
+        # Exercise the native build-tool hook in this repo's own checks. The
+        # placeholder crate does not need pkg-config; this guards evaluation
+        # and propagation of the public mkRustProject argument.
+        extraBuildPackages = pkgs: [ pkgs.pkg-config ];
         # Mirrors the scaffold flake.nix so the dogfood checks see the same
         # sandbox contents users get — keep the two in sync.
         extraSourceFilter =

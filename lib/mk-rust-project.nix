@@ -14,6 +14,9 @@
   projectName ? null,
   # pkgs: [ ... ] — additional packages for the devshell.
   extraShellPackages ? pkgs: [ ],
+  # pkgs: [ ... ] — additional native build tools for every Crane derivation.
+  # Use this for build.rs dependencies such as Zig, CMake, or pkg-config.
+  extraBuildPackages ? pkgs: [ ],
   # Additional flake checks, merged over the defaults. Either a plain
   # function `pkgs: { ... }`, or a set pattern such as
   # `{ pkgs, craneLibNightly, commonArgs, cargoArtifactsNightly, ... }: { ... }`
@@ -74,6 +77,7 @@ flake-utils.lib.eachDefaultSystem (
         nightlyToolchain
         src
         extraCiCommands
+        extraBuildPackages
         extraSourceFilter
         ;
       projectName = name;

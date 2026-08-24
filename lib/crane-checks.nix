@@ -9,6 +9,7 @@
   projectName,
   src,
   extraCiCommands,
+  extraBuildPackages,
   extraSourceFilter,
 }:
 let
@@ -31,6 +32,7 @@ let
     src = cargoSrc;
     strictDeps = true;
     version = "0.1.0";
+    nativeBuildInputs = extraBuildPackages pkgs;
   };
   dependencyArgs = commonArgs // {
     cargoCheckExtraArgs = "";
@@ -62,7 +64,7 @@ in
       commonArgs
       // {
         cargoArtifacts = cargoArtifactsStable;
-        nativeBuildInputs = [ pkgs.cargo-nextest ];
+        nativeBuildInputs = commonArgs.nativeBuildInputs ++ [ pkgs.cargo-nextest ];
         buildPhaseCargoCommand = ''
           cargo build --locked --workspace --all-targets --all-features
           cargo nextest run --locked --workspace --all-features --lib --bins --tests --examples

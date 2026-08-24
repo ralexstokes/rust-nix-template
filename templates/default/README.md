@@ -25,5 +25,5 @@ direnv allow                  # interactive shells; agents use ./tools/dev
   `.github/workflows/ci.yml` with your own and set a `CACHIX_AUTH_TOKEN`
   repository secret — or delete the Cachix steps.
 - Customization beyond the defaults goes through the `mkRustProject` arguments
-  in `flake.nix` (extra devshell packages, extra checks, extra CI commands);
-  mirror any check changes in the `justfile`.
+  in `flake.nix` (extra devshell packages, native build tools for `build.rs`,
+  extra checks, extra CI commands); mirror any check changes in the `justfile`.

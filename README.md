@@ -41,6 +41,7 @@ Arguments:
 | `src`                | (required)                       | project root with `Cargo.toml`/`Cargo.lock`/`rust-toolchain.toml` |
 | `projectName`        | from `Cargo.toml`                | labels the Nix derivations                 |
 | `extraShellPackages` | `pkgs: [ ]`                      | more devshell packages                     |
+| `extraBuildPackages` | `pkgs: [ ]`                      | native tools available to Crane builds and `build.rs` scripts |
 | `extraChecks`        | `pkgs: { }`                      | more flake checks, merged over defaults    |
 | `extraCiCommands`    | `""`                             | shell commands appended to `cargo-ci` (e.g. example smoke runs) |
 | `extraSourceFilter`  | `path: type: false`              | extra files kept in the cargo build sandbox |

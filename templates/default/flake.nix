@@ -17,6 +17,7 @@
       # Escape hatches (see the template repo's README):
       #   projectName = "my-project";
       #   extraShellPackages = pkgs: [ pkgs.mdbook ];
+      #   extraBuildPackages = pkgs: [ pkgs.pkg-config ];
       #   extraChecks = pkgs: { };
       #   extraCiCommands = "cargo run --locked -p hello --example smoke";
     };
